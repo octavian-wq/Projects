@@ -1,0 +1,9 @@
+{
+  "name": "ai-support-desk",
+  "version": "1.0.0",
+  "description": "An LLM support agent that routes customer messages three ways, with guardrails that fail safe.",
+  "type": "module",
+  "license": "MIT",
+  "scripts": { "test": "node --test test/*.test.js" },
+  "dependencies": { "@anthropic-ai/sdk": "^0.102.0" }
+}

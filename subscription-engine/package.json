@@ -1,0 +1,27 @@
+{
+  "name": "shopify-subscription-engine",
+  "version": "1.0.0",
+  "description": "A headless subscription billing engine for Shopify — bills native payment contracts directly, with a delivery calendar, cut-offs, pause/skip and dunning.",
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "start": "prisma migrate deploy && node src/server.mjs",
+    "dev": "node --watch src/server.mjs",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:studio": "prisma studio",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "@hono/node-server": "^2.0.5",
+    "@prisma/client": "^6.19.3",
+    "hono": "^4.12.25",
+    "luxon": "^3.7.2"
+  },
+  "devDependencies": {
+    "prisma": "^6.2.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

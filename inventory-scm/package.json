@@ -1,0 +1,8 @@
+{
+  "name": "inventory-scm",
+  "version": "1.0.0",
+  "description": "Supply-chain tooling for subscription commerce — demand forecasting from upcoming subscription lines, producer management, purchase orders, Shopify stock sync.",
+  "type": "module",
+  "license": "MIT",
+  "scripts": { "test": "node --test test/*.test.js" }
+}

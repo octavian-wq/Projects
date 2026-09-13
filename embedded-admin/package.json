@@ -1,0 +1,9 @@
+{
+  "name": "embedded-admin",
+  "version": "1.0.0",
+  "description": "A custom-branded embedded Shopify admin app — App Bridge session tokens, no Polaris.",
+  "type": "module",
+  "license": "MIT",
+  "scripts": { "start": "node src/server.mjs", "test": "node --test test/*.test.js" },
+  "dependencies": { "@hono/node-server": "^2.0.5", "hono": "^4.12.25", "jose": "^5.9.6" }
+}

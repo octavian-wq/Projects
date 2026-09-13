@@ -1,0 +1,8 @@
+{
+  "name": "hydrogen-portal",
+  "version": "1.0.0",
+  "description": "A headless Shopify Hydrogen customer portal for subscription management.",
+  "type": "module",
+  "license": "MIT",
+  "scripts": { "dev": "shopify hydrogen dev", "build": "shopify hydrogen build" }
+}

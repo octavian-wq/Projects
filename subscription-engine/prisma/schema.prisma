@@ -1,0 +1,143 @@
+// Subscription engine — database schema.
+//
+// Three tables carry the whole model: who subscribes (Customer), what they
+// subscribe to (Subscription), and each individual dated shipment (Delivery).
+// Everything else is an audit trail.
+//
+// Deliberately NOT stored here: addresses, catalogue and order history. Those
+// live in Shopify and are read from it. Duplicating them is how engines drift
+// out of sync with the store.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── Who ─────────────────────────────────────────────────────────────────────
+model Customer {
+  id                String  @id @default(cuid())
+  shopifyCustomerId String  @unique // gid://shopify/Customer/123
+  email             String  @unique
+  firstName         String?
+  lastName          String?
+
+  subscriptions Subscription[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ── What ────────────────────────────────────────────────────────────────────
+model Subscription {
+  id         String   @id @default(cuid())
+  customer   Customer @relation(fields: [customerId], references: [id])
+  customerId String
+
+  // The Shopify-native subscription contract and the vaulted card behind it.
+  // The engine never sees a card number; it asks Shopify to charge a token.
+  shopifyContractId String @unique
+  paymentMethodId   String
+
+  status      SubStatus @default(ACTIVE)
+  pausedUntil DateTime? // auto-resumes once this date passes
+
+  itemCount         Int         // items per box
+  pricePerItemPence Int         // resolved from itemCount — see config.js
+  frequencyWeeks    Int         @default(1)
+  usualDeliveryDay  DeliveryDay
+
+  deliveries Delivery[]
+  events     Event[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+}
+
+// ── When ────────────────────────────────────────────────────────────────────
+// One row per dated shipment. This is the unit the biller works on and the
+// unit the customer edits. Its status is the source of truth for "did this
+// week happen".
+model Delivery {
+  id             String       @id @default(cuid())
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id])
+  subscriptionId String
+
+  deliveryDate   DateTime // the date goods arrive
+  deliveryDay    DeliveryDay
+  cutoffAt       DateTime // locks + charges at this instant
+  cancelClosesAt DateTime // last moment a charged order can still be pulled
+
+  status DeliveryStatus @default(SCHEDULED)
+  source BoxSource      @default(MANUAL)
+
+  // Chosen line items, as [{ variantId, quantity, title }].
+  lines Json @default("[]")
+
+  // Billing outcome
+  shopifyOrderId String?
+  chargedAt      DateTime?
+  totalPence     Int?
+  attempts       Int       @default(0)
+  retryAt        DateTime?
+  failureReason  String?
+
+  // Set on the first charge attempt and reused on every retry, so a network
+  // timeout mid-charge can never produce a second charge. See docs/BILLING.md.
+  idempotencyKey String? @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([subscriptionId, deliveryDate])
+  @@index([status, cutoffAt])
+  @@index([status, retryAt])
+}
+
+// ── Audit ───────────────────────────────────────────────────────────────────
+model Event {
+  id             String       @id @default(cuid())
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id])
+  subscriptionId String
+  type           String // status | edit | skip | payment | note
+  message        String
+  actor          String       @default("system") // customer | staff | system
+  createdAt      DateTime     @default(now())
+
+  @@index([subscriptionId, createdAt])
+}
+
+enum SubStatus {
+  ACTIVE
+  PAUSED
+  CANCELLED
+}
+
+enum DeliveryStatus {
+  SCHEDULED // editable, not yet charged
+  CHARGED   // paid, order created in Shopify
+  SKIPPED   // customer skipped, or written off after dunning
+  FAILED    // payment failed, may have a retry queued
+  CANCELLED
+}
+
+enum BoxSource {
+  MANUAL      // customer chose the contents
+  REPEAT_LAST // auto-filled from their previous box at cut-off
+  DEFAULT     // fallback selection
+}
+
+enum DeliveryDay {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
